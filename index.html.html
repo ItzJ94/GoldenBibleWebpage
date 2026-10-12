@@ -1,0 +1,987 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Golden Bible Admin</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap">
+
+<style>
+/* === DESIGN TOKENS === */
+/* Layout: Fixed sidebar nav + scrollable main content area */
+:root {
+  --bg:        #0a0a0f;
+  --bg2:       #111118;
+  --bg3:       #18181f;
+  --border:    rgba(212,175,55,0.15);
+  --border2:   rgba(212,175,55,0.3);
+  --gold:      #D4AF37;
+  --gold-dim:  #a8882a;
+  --gold-glow: rgba(212,175,55,0.12);
+  --gold-glow2:rgba(212,175,55,0.22);
+  --fg:        #e8e4d8;
+  --fg2:       #9a9480;
+  --fg3:       #5a5548;
+  --red:       #e05570;
+  --green:     #4caf82;
+  --blue:      #5b9bd5;
+  --urgent:    rgba(224,85,112,0.12);
+  --font-display: 'Cinzel', serif;
+  --font-body:    'Inter', system-ui, sans-serif;
+  --radius:    12px;
+  --radius-sm: 8px;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.6; }
+
+/* === LAYOUT === */
+.app { display: flex; height: 100%; }
+
+/* Sidebar */
+.sidebar {
+  width: 240px; min-width: 240px; background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+  transition: transform 0.3s ease;
+}
+.sidebar-logo {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-logo .cross {
+  font-size: 22px; color: var(--gold); margin-bottom: 6px;
+}
+.sidebar-logo h1 {
+  font-family: var(--font-display); font-size: 15px; font-weight: 600;
+  color: var(--gold); letter-spacing: 0.05em; line-height: 1.3;
+}
+.sidebar-logo p { font-size: 11px; color: var(--fg2); margin-top: 2px; }
+
+.church-badge {
+  margin: 16px 16px 8px;
+  background: var(--gold-glow); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 10px 14px;
+}
+.church-badge .code { font-family: var(--font-display); font-size: 16px; color: var(--gold); font-weight: 600; }
+.church-badge .name { font-size: 11px; color: var(--fg2); margin-top: 2px; }
+.church-badge .role-pill {
+  display: inline-block; margin-top: 6px;
+  background: var(--gold); color: #0a0a0f;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
+  padding: 2px 8px; border-radius: 20px; text-transform: uppercase;
+}
+
+.nav { flex: 1; overflow-y: auto; padding: 8px 0; }
+.nav-section { padding: 16px 16px 6px; font-size: 9px; font-weight: 700; color: var(--fg3); letter-spacing: 0.18em; text-transform: uppercase; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 16px; margin: 1px 8px; border-radius: var(--radius-sm);
+  cursor: pointer; color: var(--fg2); font-size: 13px; font-weight: 500;
+  transition: all 0.15s; border: none; background: none; width: calc(100% - 16px); text-align: left;
+}
+.nav-item .icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+.nav-item:hover { background: var(--gold-glow); color: var(--fg); }
+.nav-item.active { background: var(--gold-glow2); color: var(--gold); border: 1px solid var(--border2); }
+.nav-item.active .icon { filter: drop-shadow(0 0 4px var(--gold)); }
+
+.sidebar-footer {
+  padding: 16px; border-top: 1px solid var(--border);
+}
+.logout-btn {
+  width: 100%; padding: 9px; border-radius: var(--radius-sm);
+  background: none; border: 1px solid rgba(224,85,112,0.3);
+  color: var(--red); font-size: 12px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: all 0.15s; font-family: var(--font-body);
+}
+.logout-btn:hover { background: rgba(224,85,112,0.1); }
+
+/* Main */
+.main { flex: 1; margin-left: 240px; display: flex; flex-direction: column; min-height: 100%; }
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px);
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  padding: 0 24px; height: 58px; display: flex; align-items: center; gap: 12px; z-index: 50;
+}
+.topbar h2 { font-family: var(--font-display); font-size: 16px; color: var(--fg); font-weight: 600; flex: 1; }
+.topbar .subtitle { font-size: 12px; color: var(--fg2); }
+.hamburger { display: none; background: none; border: none; color: var(--fg2); font-size: 18px; cursor: pointer; padding: 4px; }
+
+.content { flex: 1; padding: 24px; max-width: 900px; }
+
+/* === CARDS & PANELS === */
+.panel {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px; margin-bottom: 16px;
+}
+.panel-title {
+  font-family: var(--font-display); font-size: 13px; font-weight: 600;
+  color: var(--gold); letter-spacing: 0.08em; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.panel-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* === FORMS === */
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.form-row.single { grid-template-columns: 1fr; }
+.form-row.triple { grid-template-columns: 1fr 1fr 1fr; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 11px; font-weight: 600; color: var(--fg2); letter-spacing: 0.06em; text-transform: uppercase; }
+.field input, .field textarea, .field select {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 9px 12px;
+  color: var(--fg); font-family: var(--font-body); font-size: 13px;
+  outline: none; transition: border-color 0.15s;
+}
+.field input:focus, .field textarea:focus, .field select:focus { border-color: var(--gold); }
+.field textarea { resize: vertical; min-height: 80px; }
+.field select option { background: var(--bg3); }
+
+/* Toggle */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; }
+.toggle-row label { font-size: 13px; color: var(--fg); }
+.toggle {
+  position: relative; width: 42px; height: 24px;
+}
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; inset: 0; background: var(--bg3);
+  border: 1px solid var(--border); border-radius: 20px; cursor: pointer; transition: 0.2s;
+}
+.toggle-slider::before {
+  content: ''; position: absolute; width: 16px; height: 16px;
+  left: 3px; top: 3px; background: var(--fg2); border-radius: 50%; transition: 0.2s;
+}
+.toggle input:checked + .toggle-slider { background: var(--gold); border-color: var(--gold); }
+.toggle input:checked + .toggle-slider::before { transform: translateX(18px); background: #0a0a0f; }
+
+/* Buttons */
+.btn {
+  padding: 9px 18px; border-radius: var(--radius-sm); font-size: 13px;
+  font-weight: 600; cursor: pointer; border: none; display: inline-flex;
+  align-items: center; gap: 6px; transition: all 0.15s; font-family: var(--font-body);
+}
+.btn-gold { background: var(--gold); color: #0a0a0f; }
+.btn-gold:hover { background: #e6c43d; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(212,175,55,0.3); }
+.btn-outline { background: none; border: 1px solid var(--border2); color: var(--fg2); }
+.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+.btn-danger { background: none; border: 1px solid rgba(224,85,112,0.4); color: var(--red); }
+.btn-danger:hover { background: rgba(224,85,112,0.1); }
+.btn-sm { padding: 5px 12px; font-size: 11px; }
+.btn-row { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+
+/* === ITEM LIST === */
+.item-list { display: flex; flex-direction: column; gap: 8px; }
+.item-card {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 14px;
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.item-card.urgent { border-color: rgba(224,85,112,0.4); background: var(--urgent); }
+.item-card-body { flex: 1; min-width: 0; }
+.item-card-title { font-weight: 600; color: var(--fg); font-size: 13px; }
+.item-card-meta { font-size: 11px; color: var(--fg2); margin-top: 2px; }
+.item-card-text { font-size: 12px; color: var(--fg2); margin-top: 4px; line-height: 1.5; }
+.item-card-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.urgent-badge {
+  background: var(--red); color: #fff; font-size: 8px;
+  font-weight: 700; letter-spacing: 0.1em; padding: 2px 6px;
+  border-radius: 4px; text-transform: uppercase; display: inline-block; margin-bottom: 3px;
+}
+
+/* === LOGIN === */
+.login-wrap {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: var(--bg); padding: 24px;
+}
+.login-box {
+  width: 100%; max-width: 400px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 18px; padding: 36px 32px;
+}
+.login-logo { text-align: center; margin-bottom: 28px; }
+.login-logo .cross-big { font-size: 40px; color: var(--gold); display: block; margin-bottom: 8px; }
+.login-logo h1 { font-family: var(--font-display); font-size: 20px; color: var(--gold); }
+.login-logo p { font-size: 12px; color: var(--fg2); margin-top: 4px; }
+.login-box .field { margin-bottom: 14px; }
+.role-selector { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.role-btn {
+  padding: 10px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--bg3); color: var(--fg2); font-size: 11px; font-weight: 600;
+  cursor: pointer; text-align: center; transition: all 0.15s;
+  display: flex; flex-direction: column; gap: 4px; align-items: center;
+}
+.role-btn .role-icon { font-size: 20px; }
+.role-btn:hover { border-color: var(--gold-dim); color: var(--fg); }
+.role-btn.selected { border-color: var(--gold); color: var(--gold); background: var(--gold-glow); }
+.error-msg { background: rgba(224,85,112,0.12); border: 1px solid rgba(224,85,112,0.3); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--red); font-size: 12px; margin-bottom: 14px; }
+
+/* === SECTIONS === */
+.section { display: none; }
+.section.active { display: block; }
+
+/* Stats row */
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.stat-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.stat-card .stat-label { font-size: 10px; color: var(--fg3); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+.stat-card .stat-value { font-size: 26px; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; line-height: 1; }
+.stat-card .stat-sub { font-size: 11px; color: var(--fg2); }
+
+/* Live badge */
+.live-dot { display: inline-block; width: 7px; height: 7px; background: var(--red); border-radius: 50%; animation: pulse 1.4s infinite; margin-right: 5px; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
+
+/* Mobile overlay */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 90; }
+
+/* === TOAST === */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 999;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 12px 18px;
+  font-size: 13px; color: var(--fg); box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  transform: translateY(80px); opacity: 0; transition: all 0.3s ease;
+  display: flex; align-items: center; gap: 8px;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-color: rgba(76,175,130,0.5); }
+.toast.error { border-color: rgba(224,85,112,0.5); }
+
+/* === SCHEDULE TABLE === */
+.sched-table { width: 100%; border-collapse: collapse; }
+.sched-table th { font-size: 10px; color: var(--fg3); text-transform: uppercase; letter-spacing: 0.1em; padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+.sched-table td { padding: 10px; font-size: 13px; border-bottom: 1px solid rgba(212,175,55,0.06); vertical-align: middle; }
+.sched-table tr:last-child td { border-bottom: none; }
+.sched-table tr:hover td { background: var(--gold-glow); }
+
+/* Password input */
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 56px; width: 100%; }
+.pw-toggle { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--gold); font-size: 11px; font-weight: 600; cursor: pointer; }
+
+/* Divider */
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+/* Responsive */
+@media (max-width: 680px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .hamburger { display: block; }
+  .overlay.open { display: block; }
+  .form-row { grid-template-columns: 1fr; }
+  .form-row.triple { grid-template-columns: 1fr 1fr; }
+  .content { padding: 16px; }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+}
+</style>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="login-wrap">
+  <div class="login-box">
+    <div class="login-logo">
+      <span class="cross-big">✝</span>
+      <h1>Golden Bible</h1>
+      <p>Church Administration Portal</p>
+    </div>
+
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;color:var(--fg2);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;margin-bottom:8px;">Select Role</div>
+      <div class="role-selector">
+        <button class="role-btn selected" data-role="vicar" onclick="selectRole(this,'vicar')">
+          <span class="role-icon">⛪</span>Vicar
+        </button>
+        <button class="role-btn" data-role="choir" onclick="selectRole(this,'choir')">
+          <span class="role-icon">🎵</span>Choir
+        </button>
+        <button class="role-btn" data-role="ss" onclick="selectRole(this,'ss')">
+          <span class="role-icon">📖</span>Sunday School
+        </button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Church Code</label>
+      <input id="loginCode" type="text" placeholder="e.g. KCH001" maxlength="10"
+        oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <div class="pw-wrap">
+        <input id="loginPass" type="password" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="pw-toggle" onclick="togglePw('loginPass',this)">Show</button>
+      </div>
+    </div>
+
+    <div id="loginError" class="error-msg" hidden></div>
+
+    <button class="btn btn-gold" style="width:100%;justify-content:center;margin-top:8px;height:44px;font-size:14px" onclick="doLogin()" id="loginBtn">
+      ✝ Sign In
+    </button>
+  </div>
+</div>
+
+<!-- ADMIN APP -->
+<div id="adminApp" class="app" hidden>
+  <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="cross">✝</div>
+      <h1>Golden Bible</h1>
+      <p>Admin Portal</p>
+    </div>
+    <div class="church-badge">
+      <div class="code" id="sideCode">KCH001</div>
+      <div class="name" id="sideName">Church Name</div>
+      <div class="role-pill" id="sideRole">Vicar Admin</div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="doLogout()">⏻ Sign Out</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <button class="hamburger" onclick="openSidebar()">☰</button>
+      <h2 id="pageTitle">Dashboard</h2>
+      <span class="subtitle" id="pageSubtitle"></span>
+    </div>
+    <div class="content" id="mainContent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.min.js"></script>
+
+<script>
+// === FIREBASE CONFIG ===
+const firebaseConfig = {
+  apiKey: "AIzaSyCOSMaXKQGSk1P_TI9IbSxsYbYvyH0h5W8",
+  authDomain: "goldenbible-8ab63.firebaseapp.com",
+  databaseURL: "https://goldenbible-8ab63-default-rtdb.firebaseio.com",
+  projectId: "goldenbible-8ab63",
+  storageBucket: "goldenbible-8ab63.firebasestorage.app",
+  messagingSenderId: "220286401392",
+  appId: "1:220286401392:web:907e37c2334b33cbaa2db5",
+  measurementId: "G-1BCKS39Z7J"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// === STATE ===
+let state = {
+  role: 'vicar', code: '', churchSnap: null,
+  notices: [], news: [], worship: [], prayers: [],
+  editingNotice: null, editingNews: null, editingWorship: null, editingPrayer: null
+};
+
+// === ROLE CONFIG ===
+const ROLES = {
+  vicar: {
+    label: 'Vicar Admin', passKey: 'admin_password',
+    nav: ['dashboard','notices','news','worship','prayers','liveservice','info','content']
+  },
+  choir: {
+    label: 'Choir Admin', passKey: 'choir_password',
+    nav: ['dashboard','worship','content']
+  },
+  ss: {
+    label: 'Sunday School Admin', passKey: 'ss_password',
+    nav: ['dashboard','notices','news','content']
+  }
+};
+
+const NAV_ITEMS = {
+  dashboard:   { icon:'⊞', label:'Dashboard',       section:'secDashboard' },
+  notices:     { icon:'📢', label:'Notices',          section:'secNotices' },
+  news:        { icon:'📰', label:'News & Alerts',    section:'secNews' },
+  worship:     { icon:'⏰', label:'Worship Schedule', section:'secWorship' },
+  prayers:     { icon:'🙏', label:'Prayer Schedule',  section:'secPrayers' },
+  liveservice: { icon:'📡', label:'Live Service',     section:'secLive' },
+  info:        { icon:'⛪', label:'Church Info',      section:'secInfo' },
+  content:     { icon:'✨', label:'Daily Content',    section:'secContent' }
+};
+
+// === AUTH ===
+let selectedRole = 'vicar';
+function selectRole(el, role) {
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedRole = role;
+}
+
+function togglePw(id, btn) {
+  const el = document.getElementById(id);
+  if (el.type === 'password') { el.type = 'text'; btn.textContent = 'Hide'; }
+  else { el.type = 'password'; btn.textContent = 'Show'; }
+}
+
+async function doLogin() {
+  const code = document.getElementById('loginCode').value.trim().toUpperCase();
+  const pass = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+  errEl.hidden = true;
+  if (!code || !pass) { showErr('Enter church code and password.'); return; }
+
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+  try {
+    const snap = await db.ref('churches/' + code).get();
+    if (!snap.exists()) { showErr('Invalid church code.'); return; }
+    const auth = snap.child('auth');
+    const passKey = ROLES[selectedRole].passKey;
+    const stored = auth.child(passKey).val();
+    if (!stored || stored !== pass) { showErr('Incorrect password for this role.'); return; }
+    const active = auth.child('active').val();
+    if (!active) { showErr('This church account is disabled.'); return; }
+
+    state.role = selectedRole;
+    state.code = code;
+    state.churchSnap = snap;
+    initApp(snap);
+  } catch(e) {
+    showErr('Connection error: ' + e.message);
+  } finally {
+    btn.textContent = '✝ Sign In'; btn.disabled = false;
+  }
+  function showErr(msg) { errEl.textContent = msg; errEl.hidden = false; }
+}
+
+function doLogout() {
+  state = { role:'vicar', code:'', churchSnap:null, notices:[], news:[], worship:[], prayers:[], editingNotice:null, editingNews:null, editingWorship:null, editingPrayer:null };
+  document.getElementById('adminApp').hidden = true;
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginCode').value = '';
+  document.getElementById('loginPass').value = '';
+}
+
+// === APP INIT ===
+function initApp(snap) {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('adminApp').hidden = false;
+
+  const auth = snap.child('auth');
+  const info = snap.child('info');
+  const churchName = info.child('name').val() || state.code;
+
+  document.getElementById('sideCode').textContent = state.code;
+  document.getElementById('sideName').textContent = churchName;
+  document.getElementById('sideRole').textContent = ROLES[state.role].label;
+
+  buildNav();
+  loadData();
+  showSection('dashboard');
+}
+
+function buildNav() {
+  const nav = document.getElementById('nav');
+  nav.innerHTML = '';
+  const role = ROLES[state.role];
+  const groups = {
+    overview: ['dashboard'],
+    content: ['notices','news','liveservice','content'],
+    schedule: ['worship','prayers'],
+    settings: ['info']
+  };
+  const groupLabels = { overview:'Overview', content:'Content', schedule:'Schedule', settings:'Settings' };
+
+  Object.entries(groups).forEach(([g, keys]) => {
+    const allowed = keys.filter(k => role.nav.includes(k));
+    if (!allowed.length) return;
+    const sec = document.createElement('div');
+    sec.className = 'nav-section'; sec.textContent = groupLabels[g];
+    nav.appendChild(sec);
+    allowed.forEach(k => {
+      const item = NAV_ITEMS[k];
+      const btn = document.createElement('button');
+      btn.className = 'nav-item'; btn.dataset.key = k;
+      btn.innerHTML = `<span class="icon">${item.icon}</span>${item.label}`;
+      btn.onclick = () => { showSection(k); closeSidebar(); };
+      nav.appendChild(btn);
+    });
+  });
+}
+
+function showSection(key) {
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.key === key));
+  const item = NAV_ITEMS[key];
+  document.getElementById('pageTitle').textContent = item.label;
+  document.getElementById('pageSubtitle').textContent = state.code;
+  renderSection(key);
+}
+
+// === DATA ===
+function loadData() {
+  const ref = db.ref('churches/' + state.code);
+  ref.on('value', snap => {
+    if (!snap.exists()) return;
+    state.notices  = snapToArray(snap.child('notices'));
+    state.news     = snapToArray(snap.child('news'));
+    state.worship  = snapToArray(snap.child('schedule/worship'));
+    state.prayers  = snapToArray(snap.child('schedule/prayers'));
+    state.churchSnap = snap;
+    // Re-render current section
+    const active = document.querySelector('.nav-item.active');
+    if (active) renderSection(active.dataset.key);
+    else renderSection('dashboard');
+  });
+}
+
+function snapToArray(snap) {
+  const arr = [];
+  snap.forEach(child => arr.push({ _key: child.key, ...child.val() }));
+  return arr;
+}
+
+// === RENDER SECTIONS ===
+function renderSection(key) {
+  const c = document.getElementById('mainContent');
+  switch(key) {
+    case 'dashboard':   c.innerHTML = renderDashboard(); break;
+    case 'notices':     c.innerHTML = renderNotices(); break;
+    case 'news':        c.innerHTML = renderNews(); break;
+    case 'worship':     c.innerHTML = renderWorship(); break;
+    case 'prayers':     c.innerHTML = renderPrayers(); break;
+    case 'liveservice': c.innerHTML = renderLive(); break;
+    case 'info':        c.innerHTML = renderInfo(); break;
+    case 'content':     c.innerHTML = renderContent(); break;
+  }
+}
+
+// --- DASHBOARD ---
+function renderDashboard() {
+  const snap = state.churchSnap;
+  const auth = snap ? snap.child('auth') : null;
+  const info = snap ? snap.child('info') : null;
+  const plan = auth ? auth.child('plan').val() : 'basic';
+  const expiry = auth ? auth.child('license_expiry').val() : '';
+  const isLive = snap ? snap.child('content/live_service/is_live').val() : false;
+
+  return `
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Notices</div>
+      <div class="stat-value">${state.notices.length}</div>
+      <div class="stat-sub">${state.notices.filter(n=>n.urgent).length} urgent</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">News</div>
+      <div class="stat-value">${state.news.length}</div>
+      <div class="stat-sub">${state.news.filter(n=>n.urgent).length} urgent</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Worship</div>
+      <div class="stat-value">${state.worship.length}</div>
+      <div class="stat-sub">services</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Plan</div>
+      <div class="stat-value" style="font-size:18px;text-transform:capitalize">${plan}</div>
+      <div class="stat-sub">Expires ${expiry||'—'}</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">⛪ Church Info</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div><div style="font-size:11px;color:var(--fg3);text-transform:uppercase;letter-spacing:0.08em">Name</div><div style="color:var(--fg);font-weight:500;margin-top:3px">${info?info.child('name').val():'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--fg3);text-transform:uppercase;letter-spacing:0.08em">Pastor</div><div style="color:var(--fg);font-weight:500;margin-top:3px">${info?info.child('pastor').val():'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--fg3);text-transform:uppercase;letter-spacing:0.08em">Location</div><div style="color:var(--fg);font-weight:500;margin-top:3px">${info?info.child('location').val():'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--fg3);text-transform:uppercase;letter-spacing:0.08em">Live Service</div><div style="margin-top:3px">${isLive?'<span class="live-dot"></span><span style="color:var(--red);font-weight:600">LIVE NOW</span>':'<span style="color:var(--fg2)">Offline</span>'}</div></div>
+    </div>
+  </div>
+
+  ${state.notices.filter(n=>n.urgent).length ? `
+  <div class="panel" style="border-color:rgba(224,85,112,0.3)">
+    <div class="panel-title" style="color:var(--red)">⚠ Urgent Notices</div>
+    <div class="item-list">
+      ${state.notices.filter(n=>n.urgent).map(n=>`
+      <div class="item-card urgent">
+        <div class="item-card-body">
+          <div class="urgent-badge">URGENT</div>
+          <div class="item-card-title">${esc(n.title)}</div>
+          <div class="item-card-text">${esc(n.text)}</div>
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>` : ''}`;
+}
+
+// --- NOTICES ---
+function renderNotices() {
+  return `
+  <div class="panel">
+    <div class="panel-title">📢 Add Notice</div>
+    <div class="form-row">
+      <div class="field"><label>Title</label><input id="nTitle" type="text" placeholder="Notice title"></div>
+      <div class="field"><label>Date</label><input id="nDate" type="date" value="${today()}"></div>
+    </div>
+    <div class="form-row single">
+      <div class="field"><label>Message</label><textarea id="nText" placeholder="Notice content…"></textarea></div>
+    </div>
+    <div class="toggle-row">
+      <label>Mark as Urgent</label>
+      <label class="toggle"><input type="checkbox" id="nUrgent"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="saveNotice()">✦ Publish Notice</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">📋 All Notices (${state.notices.length})</div>
+    ${state.notices.length ? `<div class="item-list">${state.notices.map(n => noticeCard(n,'notices')).join('')}</div>`
+      : `<div style="color:var(--fg2);font-size:13px;padding:8px 0">No notices yet.</div>`}
+  </div>`;
+}
+
+function renderNews() {
+  return `
+  <div class="panel">
+    <div class="panel-title">📰 Add News & Alert</div>
+    <div class="form-row">
+      <div class="field"><label>Title</label><input id="ewTitle" type="text" placeholder="News headline"></div>
+      <div class="field"><label>Date</label><input id="ewDate" type="date" value="${today()}"></div>
+    </div>
+    <div class="form-row single">
+      <div class="field"><label>Content</label><textarea id="ewText" placeholder="News content…"></textarea></div>
+    </div>
+    <div class="toggle-row">
+      <label>Mark as Urgent</label>
+      <label class="toggle"><input type="checkbox" id="ewUrgent"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="saveNews()">✦ Publish News</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">📋 All News (${state.news.length})</div>
+    ${state.news.length ? `<div class="item-list">${state.news.map(n => noticeCard(n,'news')).join('')}</div>`
+      : `<div style="color:var(--fg2);font-size:13px;padding:8px 0">No news yet.</div>`}
+  </div>`;
+}
+
+function noticeCard(n, type) {
+  return `<div class="item-card ${n.urgent?'urgent':''}">
+    <div class="item-card-body">
+      ${n.urgent?'<div class="urgent-badge">URGENT</div>':''}
+      <div class="item-card-title">${esc(n.title||'')}</div>
+      <div class="item-card-meta">${esc(n.date||'')}</div>
+      <div class="item-card-text">${esc(n.text||'')}</div>
+    </div>
+    <div class="item-card-actions">
+      <button class="btn btn-danger btn-sm" onclick="deleteItem('${type}','${n._key}')">✕</button>
+    </div>
+  </div>`;
+}
+
+// --- WORSHIP ---
+function renderWorship() {
+  return `
+  <div class="panel">
+    <div class="panel-title">⏰ Add Worship Service</div>
+    <div class="form-row triple">
+      <div class="field"><label>Day</label>
+        <select id="wDay">
+          ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(d=>`<option>${d}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Time</label><input id="wTime" type="time"></div>
+      <div class="field"><label>Service Type</label><input id="wType" type="text" placeholder="e.g. Morning Mass"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="saveWorship()">✦ Add Service</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">📅 Worship Schedule</div>
+    ${state.worship.length ? `
+    <div style="overflow-x:auto">
+    <table class="sched-table">
+      <tr><th>Day</th><th>Time</th><th>Type</th><th></th></tr>
+      ${state.worship.map(w=>`
+      <tr>
+        <td style="color:var(--gold);font-weight:600">${esc(w.day||'')}</td>
+        <td style="font-variant-numeric:tabular-nums">${esc(w.time||'')}</td>
+        <td>${esc(w.type||'')}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteItem('schedule/worship','${w._key}')">✕</button></td>
+      </tr>`).join('')}
+    </table></div>` : `<div style="color:var(--fg2);font-size:13px;padding:8px 0">No services added yet.</div>`}
+  </div>`;
+}
+
+function renderPrayers() {
+  return `
+  <div class="panel">
+    <div class="panel-title">🙏 Add Prayer Meeting</div>
+    <div class="form-row triple">
+      <div class="field"><label>Day</label>
+        <select id="pDay">
+          ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(d=>`<option>${d}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Time</label><input id="pTime" type="time"></div>
+      <div class="field"><label>Location</label><input id="pLoc" type="text" placeholder="e.g. Main Hall"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="savePrayer()">✦ Add Prayer Meeting</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">📅 Prayer Schedule</div>
+    ${state.prayers.length ? `
+    <div style="overflow-x:auto">
+    <table class="sched-table">
+      <tr><th>Day</th><th>Time</th><th>Location</th><th></th></tr>
+      ${state.prayers.map(p=>`
+      <tr>
+        <td style="color:var(--gold);font-weight:600">${esc(p.day||'')}</td>
+        <td style="font-variant-numeric:tabular-nums">${esc(p.time||'')}</td>
+        <td>${esc(p.location||'')}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteItem('schedule/prayers','${p._key}')">✕</button></td>
+      </tr>`).join('')}
+    </table></div>` : `<div style="color:var(--fg2);font-size:13px;padding:8px 0">No prayer meetings added yet.</div>`}
+  </div>`;
+}
+
+// --- LIVE SERVICE ---
+function renderLive() {
+  const snap = state.churchSnap;
+  const live = snap ? snap.child('content/live_service') : null;
+  const isLive = live ? live.child('is_live').val() : false;
+  const title = live ? live.child('title').val()||'' : '';
+  const url = live ? live.child('youtube_url').val()||'' : '';
+  return `
+  <div class="panel">
+    <div class="panel-title">📡 Live Service Control</div>
+    <div class="toggle-row" style="padding:16px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:15px;font-weight:600;color:var(--fg)">
+          ${isLive?'<span class="live-dot"></span>':''}Service is ${isLive?'<span style="color:var(--red)">LIVE</span>':'Offline'}
+        </div>
+        <div style="font-size:12px;color:var(--fg2);margin-top:2px">Toggle to go live or end the stream</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="liveToggle" ${isLive?'checked':''}
+        onchange="saveLiveToggle(this.checked)"><span class="toggle-slider"></span></label>
+    </div>
+    <div style="height:16px"></div>
+    <div class="form-row single">
+      <div class="field"><label>Service Title</label><input id="liveTitle" type="text" value="${esc(title)}" placeholder="e.g. Sunday Morning Mass"></div>
+    </div>
+    <div class="form-row single">
+      <div class="field"><label>YouTube URL</label><input id="liveUrl" type="url" value="${esc(url)}" placeholder="https://youtube.com/watch?v=..."></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="saveLiveInfo()">✦ Save Live Service Info</button>
+    </div>
+  </div>`;
+}
+
+// --- CHURCH INFO ---
+function renderInfo() {
+  const snap = state.churchSnap;
+  const info = snap ? snap.child('info') : null;
+  return `
+  <div class="panel">
+    <div class="panel-title">⛪ Church Information</div>
+    <div class="form-row">
+      <div class="field"><label>Church Name</label><input id="iName" type="text" value="${esc(info?info.child('name').val()||'':'')}" placeholder="Church name"></div>
+      <div class="field"><label>Location</label><input id="iLoc" type="text" value="${esc(info?info.child('location').val()||'':'')}" placeholder="City, State"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Pastor / Vicar</label><input id="iPastor" type="text" value="${esc(info?info.child('pastor').val()||'':'')}" placeholder="Rev. Name"></div>
+      <div class="field"><label>Logo URL</label><input id="iLogo" type="url" value="${esc(info?info.child('logo_url').val()||'':'')}" placeholder="https://…"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="saveInfo()">✦ Update Church Info</button>
+    </div>
+  </div>`;
+}
+
+// --- DAILY CONTENT ---
+function renderContent() {
+  const snap = state.churchSnap;
+  const c = snap ? snap.child('content') : null;
+  const g = (path) => c ? c.child(path).val()||'' : '';
+  return `
+  <div class="panel">
+    <div class="panel-title">✝ Daily Verse</div>
+    <div class="form-row triple">
+      <div class="field"><label>Book (e.g. JHN)</label><input id="dvBook" type="text" value="${esc(g('daily/book'))}" placeholder="JHN"></div>
+      <div class="field"><label>Chapter</label><input id="dvChapter" type="number" value="${g('daily/chapter')||3}" min="1"></div>
+      <div class="field"><label>Verse</label><input id="dvVerse" type="number" value="${g('daily/verse')||16}" min="1"></div>
+    </div>
+    <div class="btn-row"><button class="btn btn-gold" onclick="saveDailyVerse()">✦ Save Verse</button></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">🎵 Song of the Day</div>
+    <div class="form-row">
+      <div class="field"><label>Song Title</label><input id="sTitle" type="text" value="${esc(g('song_of_day/title'))}" placeholder="Song name"></div>
+      <div class="field"><label>Artist</label><input id="sArtist" type="text" value="${esc(g('song_of_day/artist'))}" placeholder="Artist / Band"></div>
+    </div>
+    <div class="form-row single">
+      <div class="field"><label>YouTube URL</label><input id="sUrl" type="url" value="${esc(g('song_of_day/youtube_url'))}" placeholder="https://youtube.com/…"></div>
+    </div>
+    <div class="btn-row"><button class="btn btn-gold" onclick="saveSong()">✦ Save Song</button></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">✉ Message of the Day</div>
+    <div class="form-row single">
+      <div class="field"><label>Title</label><input id="mTitle" type="text" value="${esc(g('message_of_day/title'))}" placeholder="Message title"></div>
+    </div>
+    <div class="form-row single">
+      <div class="field"><label>Message Text</label><textarea id="mText" placeholder="Today's message…">${esc(g('message_of_day/text'))}</textarea></div>
+    </div>
+    <div class="form-row single">
+      <div class="field"><label>YouTube URL (optional)</label><input id="mUrl" type="url" value="${esc(g('message_of_day/youtube_url'))}" placeholder="https://youtube.com/…"></div>
+    </div>
+    <div class="btn-row"><button class="btn btn-gold" onclick="saveMessage()">✦ Save Message</button></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">🙏 Prayer of the Day</div>
+    <div class="form-row single">
+      <div class="field"><label>Prayer Text</label><textarea id="prText" placeholder="Today's prayer…">${esc(g('prayer_of_day/text'))}</textarea></div>
+    </div>
+    <div class="form-row single">
+      <div class="field"><label>Author</label><input id="prAuthor" type="text" value="${esc(g('prayer_of_day/author'))}" placeholder="Written by…"></div>
+    </div>
+    <div class="btn-row"><button class="btn btn-gold" onclick="savePrayer2()">✦ Save Prayer</button></div>
+  </div>`;
+}
+
+// === SAVE FUNCTIONS ===
+async function saveNotice() {
+  const title = v('nTitle'), text = v('nText'), date = v('nDate');
+  const urgent = document.getElementById('nUrgent').checked;
+  if (!title || !text) { toast('Enter title and message.','error'); return; }
+  await db.ref('churches/' + state.code + '/notices').push({ title, text, date, urgent, id: Date.now().toString() });
+  document.getElementById('nTitle').value = '';
+  document.getElementById('nText').value = '';
+  document.getElementById('nUrgent').checked = false;
+  toast('Notice published!','success');
+}
+
+async function saveNews() {
+  const title = v('ewTitle'), text = v('ewText'), date = v('ewDate');
+  const urgent = document.getElementById('ewUrgent').checked;
+  if (!title || !text) { toast('Enter title and content.','error'); return; }
+  await db.ref('churches/' + state.code + '/news').push({ title, text, date, urgent, id: Date.now().toString() });
+  document.getElementById('ewTitle').value = '';
+  document.getElementById('ewText').value = '';
+  document.getElementById('ewUrgent').checked = false;
+  toast('News published!','success');
+}
+
+async function saveWorship() {
+  const day = v('wDay'), time = v('wTime'), type = v('wType');
+  if (!day || !time || !type) { toast('Fill all fields.','error'); return; }
+  await db.ref('churches/' + state.code + '/schedule/worship').push({ day, time, type });
+  document.getElementById('wTime').value = '';
+  document.getElementById('wType').value = '';
+  toast('Worship service added!','success');
+}
+
+async function savePrayer() {
+  const day = v('pDay'), time = v('pTime'), location = v('pLoc');
+  if (!day || !time || !location) { toast('Fill all fields.','error'); return; }
+  await db.ref('churches/' + state.code + '/schedule/prayers').push({ day, time, location });
+  document.getElementById('pTime').value = '';
+  document.getElementById('pLoc').value = '';
+  toast('Prayer meeting added!','success');
+}
+
+async function saveLiveToggle(val) {
+  await db.ref('churches/' + state.code + '/content/live_service/is_live').set(val);
+  toast(val ? '🔴 Now LIVE!' : 'Stream ended.', val ? 'success' : '');
+}
+
+async function saveLiveInfo() {
+  const title = v('liveTitle'), url = v('liveUrl');
+  await db.ref('churches/' + state.code + '/content/live_service').update({ title, youtube_url: url });
+  toast('Live service info saved!','success');
+}
+
+async function saveInfo() {
+  await db.ref('churches/' + state.code + '/info').update({
+    name: v('iName'), location: v('iLoc'), pastor: v('iPastor'), logo_url: v('iLogo')
+  });
+  toast('Church info updated!','success');
+}
+
+async function saveDailyVerse() {
+  await db.ref('churches/' + state.code + '/content/daily').set({
+    book: v('dvBook'), chapter: parseInt(v('dvChapter'))||3, verse: parseInt(v('dvVerse'))||16
+  });
+  toast('Daily verse saved!','success');
+}
+
+async function saveSong() {
+  await db.ref('churches/' + state.code + '/content/song_of_day').set({
+    title: v('sTitle'), artist: v('sArtist'), youtube_url: v('sUrl')
+  });
+  toast('Song of the Day saved!','success');
+}
+
+async function saveMessage() {
+  await db.ref('churches/' + state.code + '/content/message_of_day').set({
+    title: v('mTitle'), text: v('mText'), youtube_url: v('mUrl')
+  });
+  toast('Message of the Day saved!','success');
+}
+
+async function savePrayer2() {
+  await db.ref('churches/' + state.code + '/content/prayer_of_day').set({
+    text: v('prText'), author: v('prAuthor')
+  });
+  toast('Prayer of the Day saved!','success');
+}
+
+async function deleteItem(path, key) {
+  if (!confirm2(path, key)) return;
+  await db.ref('churches/' + state.code + '/' + path + '/' + key).remove();
+  toast('Deleted.','success');
+}
+
+// Simple inline confirm using a flag (no browser alert)
+let pendingDelete = null;
+function confirm2(path, key) {
+  // We'll do it directly since confirm() doesn't work in artifacts
+  return true; // Firebase + realtime listener will update UI
+}
+
+// === UTILS ===
+function v(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function today() { return new Date().toISOString().slice(0,10); }
+
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = (type==='success'?'✓ ':'') + msg;
+  el.className = 'toast show ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+}
+</script>
+
+</body></html>
