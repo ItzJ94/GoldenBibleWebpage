@@ -1,4 +1,3 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Golden Bible Admin</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap">
 
@@ -382,6 +381,7 @@ const db = firebase.database();
 let state = {
   role: 'vicar', code: '', churchSnap: null,
   notices: [], news: [], worship: [], prayers: [],
+  choirSongs: [], ssSongs: [],
   editingNotice: null, editingNews: null, editingWorship: null, editingPrayer: null
 };
 
@@ -393,23 +393,25 @@ const ROLES = {
   },
   choir: {
     label: 'Choir Admin', passKey: 'choir_password',
-    nav: ['dashboard','worship','content']
+    nav: ['dashboard','choirsongs']
   },
   ss: {
     label: 'Sunday School Admin', passKey: 'ss_password',
-    nav: ['dashboard','notices','news','content']
+    nav: ['dashboard','sscontent']
   }
 };
 
 const NAV_ITEMS = {
-  dashboard:   { icon:'⊞', label:'Dashboard',       section:'secDashboard' },
-  notices:     { icon:'📢', label:'Notices',          section:'secNotices' },
-  news:        { icon:'📰', label:'News & Alerts',    section:'secNews' },
-  worship:     { icon:'⏰', label:'Worship Schedule', section:'secWorship' },
-  prayers:     { icon:'🙏', label:'Prayer Schedule',  section:'secPrayers' },
-  liveservice: { icon:'📡', label:'Live Service',     section:'secLive' },
-  info:        { icon:'⛪', label:'Church Info',      section:'secInfo' },
-  content:     { icon:'✨', label:'Daily Content',    section:'secContent' }
+  dashboard:   { icon:'⊞', label:'Dashboard',          section:'secDashboard' },
+  notices:     { icon:'📢', label:'Notices',             section:'secNotices' },
+  news:        { icon:'📰', label:'News & Alerts',       section:'secNews' },
+  worship:     { icon:'⏰', label:'Worship Schedule',    section:'secWorship' },
+  prayers:     { icon:'🙏', label:'Prayer Schedule',     section:'secPrayers' },
+  liveservice: { icon:'📡', label:'Live Service',        section:'secLive' },
+  info:        { icon:'⛪', label:'Church Info',         section:'secInfo' },
+  content:     { icon:'✨', label:'Daily Content',       section:'secContent' },
+  choirsongs:  { icon:'🎶', label:'Songs for Sunday',    section:'secChoirSongs' },
+  sscontent:   { icon:'📖', label:'Sunday School',       section:'secSSContent' }
 };
 
 // === AUTH ===
@@ -458,7 +460,7 @@ async function doLogin() {
 }
 
 function doLogout() {
-  state = { role:'vicar', code:'', churchSnap:null, notices:[], news:[], worship:[], prayers:[], editingNotice:null, editingNews:null, editingWorship:null, editingPrayer:null };
+  state = { role:'vicar', code:'', churchSnap:null, notices:[], news:[], worship:[], prayers:[], choirSongs:[], ssSongs:[], editingNotice:null, editingNews:null, editingWorship:null, editingPrayer:null };
   document.getElementById('adminApp').hidden = true;
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('loginCode').value = '';
@@ -489,7 +491,7 @@ function buildNav() {
   const role = ROLES[state.role];
   const groups = {
     overview: ['dashboard'],
-    content: ['notices','news','liveservice','content'],
+    content: ['notices','news','liveservice','content','choirsongs','sscontent'],
     schedule: ['worship','prayers'],
     settings: ['info']
   };
@@ -525,10 +527,12 @@ function loadData() {
   const ref = db.ref('churches/' + state.code);
   ref.on('value', snap => {
     if (!snap.exists()) return;
-    state.notices  = snapToArray(snap.child('notices'));
-    state.news     = snapToArray(snap.child('news'));
-    state.worship  = snapToArray(snap.child('schedule/worship'));
-    state.prayers  = snapToArray(snap.child('schedule/prayers'));
+    state.notices    = snapToArray(snap.child('notices'));
+    state.news       = snapToArray(snap.child('news'));
+    state.worship    = snapToArray(snap.child('schedule/worship'));
+    state.prayers    = snapToArray(snap.child('schedule/prayers'));
+    state.choirSongs = snapToArray(snap.child('content/choir_songs'));
+    state.ssSongs    = snapToArray(snap.child('content/ss/songs'));
     state.churchSnap = snap;
     // Re-render current section
     const active = document.querySelector('.nav-item.active');
@@ -555,6 +559,8 @@ function renderSection(key) {
     case 'liveservice': c.innerHTML = renderLive(); break;
     case 'info':        c.innerHTML = renderInfo(); break;
     case 'content':     c.innerHTML = renderContent(); break;
+    case 'choirsongs':  c.innerHTML = renderChoirSongs(); break;
+    case 'sscontent':   c.innerHTML = renderSSContent(); break;
   }
 }
 
@@ -961,6 +967,149 @@ function confirm2(path, key) {
   return true; // Firebase + realtime listener will update UI
 }
 
+// --- CHOIR SONGS FOR SUNDAY ---
+function renderChoirSongs() {
+  return `
+  <div class="panel">
+    <div class="panel-title">🎶 Add Song for This Sunday</div>
+    <div style="font-size:12px;color:var(--fg2);margin-bottom:14px;line-height:1.6">
+      Add the worship songs your choir will lead this Sunday. Each song can include a YouTube link for the congregation to follow along.
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Song Title</label><input id="csTitle" type="text" placeholder="e.g. How Great Thou Art"></div>
+      <div class="field"><label>Artist / Arrangement</label><input id="csArtist" type="text" placeholder="e.g. Traditional / Chris Tomlin"></div>
+    </div>
+    <div class="form-row single">
+      <div class="field"><label>YouTube URL (optional)</label><input id="csUrl" type="url" placeholder="https://youtube.com/watch?v=…"></div>
+    </div>
+    <div class="form-row single">
+      <div class="field"><label>Notes (optional)</label><input id="csNotes" type="text" placeholder="e.g. Start with verse 1 only, Key of G"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="saveChoirSong()">🎵 Add Song</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">📋 Sunday Song List (${state.choirSongs.length})</div>
+    ${state.choirSongs.length ? `
+    <div class="item-list">
+      ${state.choirSongs.map((s, i) => `
+      <div class="item-card">
+        <div style="min-width:28px;height:28px;background:var(--gold-glow);border:1px solid var(--border2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--gold);flex-shrink:0">${i+1}</div>
+        <div class="item-card-body">
+          <div class="item-card-title">${esc(s.title||'')}</div>
+          <div class="item-card-meta">${esc(s.artist||'')}${s.notes ? ' · ' + esc(s.notes) : ''}</div>
+          ${s.youtube_url ? `<div style="margin-top:4px"><a href="${esc(s.youtube_url)}" target="_blank" style="color:var(--gold);font-size:11px;text-decoration:none">▶ Watch on YouTube</a></div>` : ''}
+        </div>
+        <div class="item-card-actions">
+          <button class="btn btn-danger btn-sm" onclick="deleteItem('content/choir_songs','${s._key}')">✕</button>
+        </div>
+      </div>`).join('')}
+    </div>` : `<div style="color:var(--fg2);font-size:13px;padding:8px 0">No songs added yet for this Sunday.</div>`}
+  </div>`;
+}
+
+async function saveChoirSong() {
+  const title = v('csTitle'), artist = v('csArtist');
+  if (!title) { toast('Enter a song title.','error'); return; }
+  await db.ref('churches/' + state.code + '/content/choir_songs').push({
+    title, artist, youtube_url: v('csUrl'), notes: v('csNotes'), added: Date.now()
+  });
+  document.getElementById('csTitle').value = '';
+  document.getElementById('csArtist').value = '';
+  document.getElementById('csUrl').value = '';
+  document.getElementById('csNotes').value = '';
+  toast('Song added to Sunday list!','success');
+}
+
+// --- SUNDAY SCHOOL CONTENT ---
+function renderSSContent() {
+  const snap = state.churchSnap;
+  const ss = snap ? snap.child('content/ss') : null;
+  const theme = ss ? ss.child('theme_of_week') : null;
+  const g = (path) => theme ? theme.child(path).val()||'' : '';
+  return `
+  <div class="panel">
+    <div class="panel-title">✝ Theme of the Week</div>
+    <div style="font-size:12px;color:var(--fg2);margin-bottom:14px">Set the weekly theme for Sunday School lessons.</div>
+    <div class="form-row single">
+      <div class="field"><label>Theme Title</label><input id="ssThemeTitle" type="text" value="${esc(g('title'))}" placeholder="e.g. Faith & Courage"></div>
+    </div>
+    <div class="form-row single">
+      <div class="field"><label>Description / Lesson Focus</label><textarea id="ssThemeDesc" placeholder="What this week's lesson is about…">${esc(g('description'))}</textarea></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Bible Reference</label><input id="ssThemeRef" type="text" value="${esc(g('reference'))}" placeholder="e.g. Hebrews 11:1"></div>
+      <div class="field"><label>Week of</label><input id="ssThemeDate" type="date" value="${g('week_date')||today()}"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="saveSSTheme()">✦ Save Theme</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">🎵 Add Sunday School Song</div>
+    <div class="form-row">
+      <div class="field"><label>Song Title</label><input id="ssSongTitle" type="text" placeholder="e.g. Jesus Loves Me"></div>
+      <div class="field"><label>Category</label>
+        <select id="ssSongCat">
+          <option value="worship">Worship</option>
+          <option value="praise">Praise</option>
+          <option value="memory">Memory Verse Song</option>
+          <option value="fun">Fun / Children's</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row single">
+      <div class="field"><label>YouTube URL (optional)</label><input id="ssSongUrl" type="url" placeholder="https://youtube.com/watch?v=…"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="saveSSsong()">🎵 Add Song</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">📋 SS Song List (${state.ssSongs.length})</div>
+    ${state.ssSongs.length ? `
+    <div class="item-list">
+      ${state.ssSongs.map(s => `
+      <div class="item-card">
+        <div style="font-size:18px;flex-shrink:0">🎵</div>
+        <div class="item-card-body">
+          <div class="item-card-title">${esc(s.title||'')}</div>
+          <div class="item-card-meta" style="text-transform:capitalize">${esc(s.category||'')}</div>
+          ${s.youtube_url ? `<div style="margin-top:4px"><a href="${esc(s.youtube_url)}" target="_blank" style="color:var(--gold);font-size:11px;text-decoration:none">▶ Watch on YouTube</a></div>` : ''}
+        </div>
+        <div class="item-card-actions">
+          <button class="btn btn-danger btn-sm" onclick="deleteItem('content/ss/songs','${s._key}')">✕</button>
+        </div>
+      </div>`).join('')}
+    </div>` : `<div style="color:var(--fg2);font-size:13px;padding:8px 0">No songs added yet.</div>`}
+  </div>`;
+}
+
+async function saveSSTheme() {
+  const title = v('ssThemeTitle');
+  if (!title) { toast('Enter a theme title.','error'); return; }
+  await db.ref('churches/' + state.code + '/content/ss/theme_of_week').set({
+    title, description: v('ssThemeDesc'), reference: v('ssThemeRef'), week_date: v('ssThemeDate')
+  });
+  toast('Theme of the Week saved!','success');
+}
+
+async function saveSSsong() {
+  const title = v('ssSongTitle');
+  if (!title) { toast('Enter a song title.','error'); return; }
+  const cat = document.getElementById('ssSongCat').value;
+  await db.ref('churches/' + state.code + '/content/ss/songs').push({
+    title, category: cat, youtube_url: v('ssSongUrl'), added: Date.now()
+  });
+  document.getElementById('ssSongTitle').value = '';
+  document.getElementById('ssSongUrl').value = '';
+  toast('SS song added!','success');
+}
+
 // === UTILS ===
 function v(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -983,5 +1132,3 @@ function closeSidebar() {
   document.getElementById('overlay').classList.remove('open');
 }
 </script>
-
-</body></html>
